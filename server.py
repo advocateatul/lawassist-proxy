@@ -13,6 +13,7 @@ Routes (all text-only except /gemini, which also carries vision):
   /groq      — Groq-hosted model (default Llama 3.3), OpenAI style.
   /openrouter — OpenRouter FREE models, tried in order until one answers.
   /hf        — Hugging Face Inference Providers, tried in order.
+  /nvidia    — NVIDIA NIM free endpoint (Nemotron 3 Ultra), OpenAI style.
 
 Every backup route accepts a plain {"prompt": "..."} body and returns
 {"reply": "..."}. A missing key returns 503 and a failed provider
@@ -32,6 +33,9 @@ Env: GEMINI_API_KEY (required), GEMINI_MODEL (default gemini-3.8-flash),
        tier), CF_MODELS (comma-separated; default: 4 chat models, first
        success wins). Workers AI answers via its /ai/run/{model} REST
        endpoint; response shape is {"result": {"response": "..."}}.
+     NVIDIA_API_KEY (optional), NVIDIA_MODELS (comma-separated;
+       default: nvidia/nemotron-3-ultra-550b-a55b — NVIDIA NIM free
+       endpoint at integrate.api.nvidia.com/v1, OpenAI style).
 Free-model IDs change over time; a stale ID just fails over to the next
 model, and the lists can be refreshed from env with no code change.
 """
@@ -70,6 +74,11 @@ CF_MODELS = [m.strip() for m in os.environ.get(
     "@cf/mistral/mistral-7b-instruct-v0.1,"
     "@cf/qwen/qwen1.5-7b-chat-awq",
 ).split(",") if m.strip()]
+NVIDIA_KEY = os.environ.get("NVIDIA_API_KEY", "")
+NVIDIA_MODELS = [m.strip() for m in os.environ.get(
+    "NVIDIA_MODELS",
+    "nvidia/nemotron-3-ultra-550b-a55b",
+).split(",") if m.strip()]
 ORIGINS = os.environ.get(
     "ALLOWED_ORIGINS",
     "https://advocateatul.github.io,https://advocateatul.eu.org",
@@ -103,7 +112,9 @@ def root():
             "hf_configured": bool(HF_KEY),
             "hf_models": HF_MODELS,
             "cf_configured": bool(CF_TOKEN and CF_ACCOUNT),
-            "cf_models": CF_MODELS}
+            "cf_models": CF_MODELS,
+            "nvidia_configured": bool(NVIDIA_KEY),
+            "nvidia_models": NVIDIA_MODELS}
 
 
 async def _prompt(request):
@@ -301,4 +312,30 @@ async def hf(request: Request):
             return JSONResponse({"reply": reply, "model": model})
         last = model + ": " + why
     return JSONResponse({"error": "all hf models failed: " + last[:200]},
+                        status_code=502)
+
+@app.post("/nvidia")
+async def nvidia(request: Request):
+    """NVIDIA NIM free endpoint (Nemotron 3 Ultra), tried in order.
+
+    OpenAI-style chat at integrate.api.nvidia.com/v1. Missing key ->
+    503 so the site falls through to its built-in engine.
+    """
+    if not NVIDIA_KEY:
+        return JSONResponse({"error": "nvidia key not configured"},
+                            status_code=503)
+    prompt, err = await _prompt(request)
+    if err is not None:
+        return err
+    headers = {"Authorization": "Bearer " + NVIDIA_KEY,
+               "Content-Type": "application/json"}
+    last = "no models configured"
+    for model in NVIDIA_MODELS:
+        reply, why = _chat(
+            "https://integrate.api.nvidia.com/v1/chat/completions",
+            headers, model, prompt, timeout=30)
+        if reply is not None:
+            return JSONResponse({"reply": reply, "model": model})
+        last = model + ": " + why
+    return JSONResponse({"error": "all nvidia models failed: " + last[:200]},
                         status_code=502)
