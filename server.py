@@ -28,6 +28,10 @@ Env: GEMINI_API_KEY (required), GEMINI_MODEL (default gemini-3.8-flash),
      HF_API_KEY (optional),
      HF_MODELS (comma-separated; default: Mistral-7B-Instruct-v0.3,
        Qwen2.5-7B-Instruct — both openly licensed, no gated approval).
+     CF_API_TOKEN + CF_ACCOUNT_ID (optional; Cloudflare Workers AI free
+       tier), CF_MODELS (comma-separated; default: 4 chat models, first
+       success wins). Workers AI answers via its /ai/run/{model} REST
+       endpoint; response shape is {"result": {"response": "..."}}.
 Free-model IDs change over time; a stale ID just fails over to the next
 model, and the lists can be refreshed from env with no code change.
 """
@@ -56,6 +60,15 @@ HF_KEY = os.environ.get("HF_API_KEY", "")
 HF_MODELS = [m.strip() for m in os.environ.get(
     "HF_MODELS",
     "mistralai/Mistral-7B-Instruct-v0.3,Qwen/Qwen2.5-7B-Instruct",
+).split(",") if m.strip()]
+CF_TOKEN = os.environ.get("CF_API_TOKEN", "")
+CF_ACCOUNT = os.environ.get("CF_ACCOUNT_ID", "")
+CF_MODELS = [m.strip() for m in os.environ.get(
+    "CF_MODELS",
+    "@cf/meta/llama-3.1-8b-instruct,"
+    "@cf/meta/llama-3-8b-instruct,"
+    "@cf/mistral/mistral-7b-instruct-v0.1,"
+    "@cf/qwen/qwen1.5-7b-chat-awq",
 ).split(",") if m.strip()]
 ORIGINS = os.environ.get(
     "ALLOWED_ORIGINS",
@@ -88,7 +101,9 @@ def root():
             "openrouter_configured": bool(OR_KEY),
             "openrouter_models": OR_MODELS,
             "hf_configured": bool(HF_KEY),
-            "hf_models": HF_MODELS}
+            "hf_models": HF_MODELS,
+            "cf_configured": bool(CF_TOKEN and CF_ACCOUNT),
+            "cf_models": CF_MODELS}
 
 
 async def _prompt(request):
@@ -209,6 +224,60 @@ async def openrouter(request: Request):
             return JSONResponse({"reply": reply, "model": model})
         last = model + ": " + why
     return JSONResponse({"error": "all openrouter models failed: " + last[:200]},
+                        status_code=502)
+
+
+@app.post("/cf")
+async def cf(request: Request):
+    """Cloudflare Workers AI (free tier), tried in order until one answers.
+
+    REST shape differs from OpenAI style: POST /ai/run/{model} with
+    {"messages": [...]}, reply at result.response. Missing token or
+    account id -> 503 so the site falls through to built-in.
+    """
+    if not CF_TOKEN or not CF_ACCOUNT:
+        return JSONResponse({"error": "cloudflare not configured"},
+                            status_code=503)
+    prompt, err = await _prompt(request)
+    if err is not None:
+        return err
+    last = "no models configured"
+    for model in CF_MODELS:
+        try:
+            r = requests.post(
+                "https://api.cloudflare.com/client/v4/accounts/"
+                + CF_ACCOUNT + "/ai/run/" + model,
+                json={"messages": [{"role": "user", "content": prompt}]},
+                headers={"Authorization": "Bearer " + CF_TOKEN,
+                         "Content-Type": "application/json"},
+                timeout=12,
+            )
+        except requests.RequestException as e:
+            last = model + ": unreachable: " + str(e)[:80]
+            continue
+        try:
+            payload = r.json()
+        except ValueError:
+            last = model + ": non-JSON response"
+            continue
+        if r.status_code != 200 or not payload.get("success", True):
+            errs = payload.get("errors", []) if isinstance(payload, dict) else []
+            msg = ""
+            try:
+                msg = errs[0].get("message", "") if errs else ""
+            except (AttributeError, TypeError):
+                msg = ""
+            last = model + ": HTTP %s %s" % (r.status_code, str(msg)[:100])
+            continue
+        try:
+            text = (payload["result"]["response"] or "").strip()
+        except (KeyError, TypeError):
+            last = model + ": unexpected shape"
+            continue
+        if text:
+            return JSONResponse({"reply": text, "model": model})
+        last = model + ": empty reply"
+    return JSONResponse({"error": "all cf models failed: " + last[:200]},
                         status_code=502)
 
 
