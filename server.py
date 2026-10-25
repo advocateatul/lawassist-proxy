@@ -67,7 +67,10 @@ OR_MODELS = [m.strip() for m in os.environ.get(
     "nvidia/nemotron-3-super-120b-a12b:free,"
     "google/gemma-4-31b-it:free,"
     "google/gemma-4-26b-a4b-it:free,"
-    "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free",
+    "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free,"
+    "nvidia/nemotron-3.5-lightning:free,"
+    "thinkingmachines/inkling:free,"
+    "xingchen-agi/xing4.0-29b-a4b:free",
 ).split(",") if m.strip()]
 HF_KEY = os.environ.get("HF_API_KEY", "")
 HF_MODELS = [m.strip() for m in os.environ.get(
@@ -86,7 +89,10 @@ CF_MODELS = [m.strip() for m in os.environ.get(
 NVIDIA_KEY = os.environ.get("NVIDIA_API_KEY", "")
 NVIDIA_MODELS = [m.strip() for m in os.environ.get(
     "NVIDIA_MODELS",
-    "nvidia/nemotron-3-ultra-550b-a55b",
+    "nvidia/nemotron-3-ultra-550b-a55b,"
+    "nvidia/nemotron-3-super-120b-a12b,"
+    "nvidia/nemotron-3-nano-30b-a3b,"
+    "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning",
 ).split(",") if m.strip()]
 ORIGINS = os.environ.get(
     "ALLOWED_ORIGINS",
