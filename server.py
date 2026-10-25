@@ -22,7 +22,7 @@ finally to its built-in engine — never a broken page.
 
 Env: GEMINI_API_KEY (required), GEMINI_MODEL (default gemini-3.8-flash),
      ALLOWED_ORIGINS (comma-separated, optional override).
-     GROQ_API_KEY (optional), GROQ_MODEL (default llama-3.3-70b-versatile).
+     GROQ_API_KEY (optional), GROQ_MODELS (default gpt-oss-120b first; llama-3.3-70b-versatile retired by Groq Aug 2026).
      OPENROUTER_API_KEY (optional),
      OPENROUTER_MODELS (comma-separated; default: 5 free models, first
        success wins; a single OPENROUTER_MODEL overrides the list).
@@ -49,7 +49,16 @@ from fastapi.responses import JSONResponse
 KEY = os.environ.get("GEMINI_API_KEY", "")
 MODEL = os.environ.get("GEMINI_MODEL", "gemini-3.8-flash")
 GROQ_KEY = os.environ.get("GROQ_API_KEY", "")
-GROQ_MODEL = os.environ.get("GROQ_MODEL", "llama-3.3-70b-versatile")
+_GROQ_SINGLE = os.environ.get("GROQ_MODEL", "")
+GROQ_MODELS = [m.strip() for m in os.environ.get(
+    "GROQ_MODELS",
+    _GROQ_SINGLE or "openai/gpt-oss-120b,"
+    "openai/gpt-oss-20b,"
+    "meta-llama/llama-4-scout-17b-16e-instruct,"
+    "meta-llama/llama-4-maverick-17b-128e-instruct,"
+    "llama-3.1-8b-instant",
+).split(",") if m.strip()]
+GROQ_MODEL = GROQ_MODELS[0] if GROQ_MODELS else ""
 OR_KEY = os.environ.get("OPENROUTER_API_KEY", "")
 _OR_SINGLE = os.environ.get("OPENROUTER_MODEL", "")
 OR_MODELS = [m.strip() for m in os.environ.get(
@@ -107,6 +116,7 @@ def root():
             "key_configured": bool(KEY),
             "groq_configured": bool(GROQ_KEY),
             "groq_model": GROQ_MODEL,
+            "groq_models": GROQ_MODELS,
             "openrouter_configured": bool(OR_KEY),
             "openrouter_models": OR_MODELS,
             "hf_configured": bool(HF_KEY),
@@ -203,14 +213,19 @@ async def groq(request: Request):
     prompt, err = await _prompt(request)
     if err is not None:
         return err
-    reply, why = _chat(
-        "https://api.groq.com/openai/v1/chat/completions",
-        {"Authorization": "Bearer " + GROQ_KEY,
-         "Content-Type": "application/json"},
-        GROQ_MODEL, prompt, timeout=25)
+    reply, why, used = None, "no models configured", ""
+    for _m in GROQ_MODELS:
+        reply, why = _chat(
+            "https://api.groq.com/openai/v1/chat/completions",
+            {"Authorization": "Bearer " + GROQ_KEY,
+             "Content-Type": "application/json"},
+            _m, prompt, timeout=25)
+        if reply is not None:
+            used = _m
+            break
     if reply is None:
         return JSONResponse({"error": "groq error: " + why}, status_code=502)
-    return JSONResponse({"reply": reply})
+    return JSONResponse({"reply": reply, "model": used})
 
 
 @app.post("/openrouter")
