@@ -54,11 +54,11 @@ OR_KEY = os.environ.get("OPENROUTER_API_KEY", "")
 _OR_SINGLE = os.environ.get("OPENROUTER_MODEL", "")
 OR_MODELS = [m.strip() for m in os.environ.get(
     "OPENROUTER_MODELS",
-    _OR_SINGLE or "deepseek/deepseek-chat-v3-0324:free,"
-    "meta-llama/llama-3.3-70b-instruct:free,"
-    "google/gemma-3-27b-it:free,"
-    "qwen/qwen3-235b-a22b:free,"
-    "mistralai/mistral-small-3.1-24b-instruct:free",
+    _OR_SINGLE or "nvidia/nemotron-3-ultra-550b-a55b:free,"
+    "nvidia/nemotron-3-super-120b-a12b:free,"
+    "google/gemma-4-31b-it:free,"
+    "google/gemma-4-26b-a4b-it:free,"
+    "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free",
 ).split(",") if m.strip()]
 HF_KEY = os.environ.get("HF_API_KEY", "")
 HF_MODELS = [m.strip() for m in os.environ.get(
