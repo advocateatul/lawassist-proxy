@@ -55,8 +55,7 @@ GROQ_MODELS = [m.strip() for m in os.environ.get(
     _GROQ_SINGLE or "openai/gpt-oss-120b,"
     "openai/gpt-oss-20b,"
     "meta-llama/llama-4-scout-17b-16e-instruct,"
-    "meta-llama/llama-4-maverick-17b-128e-instruct,"
-    "llama-3.1-8b-instant",
+    "meta-llama/llama-4-maverick-17b-128e-instruct",
 ).split(",") if m.strip()]
 GROQ_MODEL = GROQ_MODELS[0] if GROQ_MODELS else ""
 OR_KEY = os.environ.get("OPENROUTER_API_KEY", "")
@@ -150,15 +149,23 @@ async def _prompt(request):
     return prompt, None
 
 
-def _chat(url, headers, model, prompt, timeout):
-    """One OpenAI-style chat call. Returns (reply, error-string)."""
+def _chat(url, headers, model, prompt, timeout, max_tokens=2048, extra=None):
+    """One OpenAI-style chat call. Returns (reply, error-string).
+
+    Only the message "content" is ever returned — "reasoning" and
+    "reasoning_content" fields are never passed through, so a model's
+    chain-of-thought cannot leak into the site's answer.
+    """
+    body = {"model": model,
+            "messages": [{"role": "user", "content": prompt}],
+            "temperature": 0.3,
+            "max_tokens": max_tokens}
+    if extra:
+        body.update(extra)
     try:
         r = requests.post(
             url,
-            json={"model": model,
-                  "messages": [{"role": "user", "content": prompt}],
-                  "temperature": 0.3,
-                  "max_tokens": 2048},
+            json=body,
             headers=headers,
             timeout=timeout,
         )
@@ -176,8 +183,9 @@ def _chat(url, headers, model, prompt, timeout):
             err = ""
         return None, "HTTP %s %s" % (r.status_code, str(err)[:120])
     try:
-        text = payload["choices"][0]["message"]["content"]
-    except (KeyError, IndexError, TypeError):
+        msg = payload["choices"][0]["message"]
+        text = msg.get("content")  # content only — never reasoning fields
+    except (KeyError, IndexError, TypeError, AttributeError):
         return None, "unexpected shape"
     text = (text or "").strip()
     return (text or None), ("" if text else "empty reply")
@@ -251,7 +259,8 @@ async def openrouter(request: Request):
     for model in OR_MODELS:
         reply, why = _chat(
             "https://openrouter.ai/api/v1/chat/completions",
-            headers, model, prompt, timeout=10)
+            headers, model, prompt, timeout=10, max_tokens=4096,
+            extra={"reasoning": {"exclude": True}})
         if reply is not None:
             return JSONResponse({"reply": reply, "model": model})
         last = model + ": " + why
