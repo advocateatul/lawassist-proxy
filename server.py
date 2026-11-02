@@ -292,7 +292,7 @@ async def cf(request: Request):
                 json={"messages": [{"role": "user", "content": prompt}]},
                 headers={"Authorization": "Bearer " + CF_TOKEN,
                          "Content-Type": "application/json"},
-                timeout=12,
+                timeout=60
             )
         except requests.RequestException as e:
             last = model + ": unreachable: " + str(e)[:80]
