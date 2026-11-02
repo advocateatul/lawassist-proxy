@@ -323,8 +323,23 @@ async def cf(request: Request):
             tried_errors.append(last)
             continue
         try:
-            text = (payload["result"]["response"] or "").strip()
-        except (KeyError, TypeError):
+            res = payload["result"]
+            if isinstance(res, str):
+                text = res.strip()
+            elif isinstance(res, dict) and isinstance(res.get("response"), str):
+                text = (res["response"] or "").strip()
+            elif isinstance(res, dict) and res.get("choices"):
+                ch = res["choices"][0]
+                msg = ch.get("message") if isinstance(ch, dict) else None
+                if isinstance(msg, dict):
+                    text = (msg.get("content") or "").strip()
+                elif isinstance(ch, dict):
+                    text = (ch.get("text") or "").strip()
+                else:
+                    text = ""
+            else:
+                raise KeyError("no response or choices")
+        except (KeyError, TypeError, IndexError):
             res = payload.get("result") if isinstance(payload, dict) else None
             keys = list(res.keys()) if isinstance(res, dict) else type(res).__name__
             last = model + ": unexpected shape result_keys=" + str(keys)[:120]
