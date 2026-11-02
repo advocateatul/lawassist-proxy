@@ -265,8 +265,8 @@ async def openrouter(request: Request):
                "X-Title": "AK Legal Law - LawAssist"}
     last = "no models configured"
     only = request.query_params.get("model")
-  try_models = [only] if only else OR_MODELS
-  for model in try_models:
+    try_models = [only] if only else OR_MODELS
+    for model in try_models:
         reply, why = _chat(
             "https://openrouter.ai/api/v1/chat/completions",
             headers, model, prompt, timeout=10, max_tokens=4096,
@@ -294,8 +294,8 @@ async def cf(request: Request):
         return err
     last = "no models configured"
     tried_errors = []
-  only = request.query_params.get("model")
-try_models = [only] if only else CF_MODELS
+    only = request.query_params.get("model")
+    try_models = [only] if only else CF_MODELS
     for model in try_models:
         try:
             body = {"messages": [{"role": "user", "content": prompt}]}
