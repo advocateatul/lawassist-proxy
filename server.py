@@ -80,6 +80,7 @@ CF_TOKEN = os.environ.get("CF_API_TOKEN", "")
 CF_ACCOUNT = os.environ.get("CF_ACCOUNT_ID", "")
 CF_MODELS = [m.strip() for m in os.environ.get(
     "CF_MODELS",
+  "@cf/qwen/qwen3.8-27b",
     "@cf/meta/llama-3.1-8b-instruct,"
     "@cf/meta/llama-3-8b-instruct,"
     "@cf/mistral/mistral-7b-instruct-v0.1,"
