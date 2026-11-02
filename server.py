@@ -69,7 +69,10 @@ OR_MODELS = [m.strip() for m in os.environ.get(
     "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free,"
     "nvidia/nemotron-3.5-lightning:free,"
     "thinkingmachines/inkling:free,"
-    "xingchen-agi/xing4.0-29b-a4b:free",
+    "xingchen-agi/xing4.0-29b-a4b:free,"
+  "recursive/flint-v1.0:free,"
+  "nvidia/nemotron-3.5-super-vl:free,"
+  "thinkingmachines/inkling-small:free",
 ).split(",") if m.strip()]
 HF_KEY = os.environ.get("HF_API_KEY", "")
 HF_MODELS = [m.strip() for m in os.environ.get(
@@ -84,7 +87,11 @@ CF_MODELS = [m.strip() for m in os.environ.get(
     "@cf/meta/llama-3.1-8b-instruct,"
     "@cf/meta/llama-3-8b-instruct,"
     "@cf/mistral/mistral-7b-instruct-v0.1,"
-    "@cf/qwen/qwen1.5-7b-chat-awq",
+    "@cf/qwen/qwen1.5-7b-chat-awq,"
+  "@cf/qwen/qwen3-30b-a3b-fp8,"
+  "@cf/deepseek-ai/deepseek-v4.1-flash-1017,"
+  "@cf/moonshotai/kimi-k2.6,"
+  "@cf/nvidia/nemotron-3-120b-a12b,"
 ).split(",") if m.strip()]
 NVIDIA_KEY = os.environ.get("NVIDIA_API_KEY", "")
 NVIDIA_MODELS = [m.strip() for m in os.environ.get(
