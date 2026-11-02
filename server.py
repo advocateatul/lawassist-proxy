@@ -324,9 +324,9 @@ async def cf(request: Request):
             continue
         try:
             text = (payload["result"]["response"] or "").strip()
-                    except (KeyError, TypeError):
+        except (KeyError, TypeError):
             res = payload.get("result") if isinstance(payload, dict) else None
-keys = list(res.keys()) if isinstance(res, dict) else type(res).__name__
+            keys = list(res.keys()) if isinstance(res, dict) else type(res).__name__
             last = model + ": unexpected shape result_keys=" + str(keys)[:120]
             tried_errors.append(last)
             continue
