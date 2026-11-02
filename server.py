@@ -83,8 +83,7 @@ CF_TOKEN = os.environ.get("CF_API_TOKEN", "")
 CF_ACCOUNT = os.environ.get("CF_ACCOUNT_ID", "")
 CF_MODELS = [m.strip() for m in os.environ.get(
     "CF_MODELS",
-  "@cf/qwen/qwen3.8-27b,"
-    "@cf/meta/llama-3.1-8b-instruct,"
+  "@"@cf/meta/llama-3.1-8b-instruct,"
     "@cf/meta/llama-3-8b-instruct,"
     "@cf/mistral/mistral-7b-instruct-v0.1,"
     "@cf/qwen/qwen1.5-7b-chat-awq,"
@@ -92,6 +91,7 @@ CF_MODELS = [m.strip() for m in os.environ.get(
   "@cf/deepseek-ai/deepseek-v4.1-flash-1017,"
   "@cf/moonshotai/kimi-k2.6,"
   "@cf/nvidia/nemotron-3-120b-a12b,"
+  "@cf/qwen/qwen3.8-27b"
 ).split(",") if m.strip()]
 NVIDIA_KEY = os.environ.get("NVIDIA_API_KEY", "")
 NVIDIA_MODELS = [m.strip() for m in os.environ.get(
