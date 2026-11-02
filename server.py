@@ -291,7 +291,7 @@ async def cf(request: Request):
     if err is not None:
         return err
     last = "no models configured"
-  tried_errors = []
+    tried_errors = []
     for model in CF_MODELS:
         try:
             r = requests.post(
@@ -304,13 +304,13 @@ async def cf(request: Request):
             )
         except requests.RequestException as e:
             last = model + ": unreachable: " + str(e)[:80]
-          tried_errors.append(last)
+            tried_errors.append(last)
             continue
         try:
             payload = r.json()
         except ValueError:
             last = model + ": non-JSON response"
-          tried_errors.append(last)
+            tried_errors.append(last)
             continue
         if r.status_code != 200 or not payload.get("success", True):
             errs = payload.get("errors", []) if isinstance(payload, dict) else []
@@ -320,20 +320,20 @@ async def cf(request: Request):
             except (AttributeError, TypeError):
                 msg = ""
             last = model + ": HTTP %s %s" % (r.status_code, str(msg)[:100])
-          tried_errors.append(last)
+            tried_errors.append(last)
             continue
         try:
             text = (payload["result"]["response"] or "").strip()
         except (KeyError, TypeError):
             last = model + ": unexpected shape"
-          tried_errors.append(last)
+            tried_errors.append(last)
             continue
         if text:
             if request.query_params.get("debug") == "1":
-              return JSONResponse({"reply": text, "model": model, "tried_errors": tried_errors})
-              return JSONResponse({"reply": text, "model": model})
+                return JSONResponse({"reply": text, "model": model, "tried_errors": tried_errors})
+            return JSONResponse({"reply": text, "model": model})
         last = model + ": empty reply"
-tried_errors.append(last)
+        tried_errors.append(last)
     return JSONResponse({"error": "all cf models failed: " + last[:200], "tried_errors": tried_errors},
                         status_code=502)
 
