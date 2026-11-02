@@ -296,7 +296,7 @@ async def cf(request: Request):
         try:
             body = {"messages": [{"role": "user", "content": prompt}]}
             if model == "@cf/qwen/qwen3.8-27b":
-                body["reasoning_effort"] = low"
+                body["reasoning_effort"] = "low"
             r = requests.post(
                 "https://api.cloudflare.com/client/v4/accounts/"
                 + CF_ACCOUNT + "/ai/run/" + model,
