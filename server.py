@@ -294,10 +294,13 @@ async def cf(request: Request):
     tried_errors = []
     for model in CF_MODELS:
         try:
-            r = requests.post(
+            body = {"messages": [{"role": "user", "content": prompt}]}
+          if model == "@cf/qwen/qwen3.8-27b":
+            body["reasoning_effort"] = "medium"
+          r = requests.post(
                 "https://api.cloudflare.com/client/v4/accounts/"
                 + CF_ACCOUNT + "/ai/run/" + model,
-                json={"messages": [{"role": "user", "content": prompt}]},
+                json=body,
                 headers={"Authorization": "Bearer " + CF_TOKEN,
                          "Content-Type": "application/json"},
                 timeout=60
