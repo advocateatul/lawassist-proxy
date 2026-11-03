@@ -115,8 +115,7 @@ LLM7_MODELS = [m.strip() for m in os.environ.get(
 KILO_KEY = os.environ.get("KILO_API_KEY", "")
 KILO_MODELS = [m.strip() for m in os.environ.get(
     "KILO_MODELS",
-    "kilo-auto/free,thinkingmachines/inkling:free,"
-    "minimax/minimax-m2.7:free,z-ai/glm-5:free",
+    "nvidia/nemotron-3.5-super-vl:free",
 ).split(",") if m.strip()]
 POLLINATIONS_KEY = os.environ.get("POLLINATIONS_API_KEY", "")
 POLLINATIONS_MODELS = [m.strip() for m in os.environ.get(
