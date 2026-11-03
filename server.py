@@ -101,6 +101,28 @@ NVIDIA_MODELS = [m.strip() for m in os.environ.get(
     "nvidia/nemotron-3-nano-30b-a3b,"
     "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning",
 ).split(",") if m.strip()]
+SAMBANOVA_KEY = os.environ.get("SAMBANOVA_API_KEY", "")
+SAMBANOVA_MODELS = [m.strip() for m in os.environ.get(
+    "SAMBANOVA_MODELS",
+    "Meta-Llama-3.3-70B-Instruct,DeepSeek-V3.1,gpt-oss-120b",
+).split(",") if m.strip()]
+LLM7_KEY = os.environ.get("LLM7_API_KEY", "")
+LLM7_MODELS = [m.strip() for m in os.environ.get(
+    "LLM7_MODELS",
+    "nemotron-3-nano:30b,mistral-Nemo-Instruct-2407,"
+    "DeepSeek-V4-Flash-0731,GLM-5.3-Flash",
+).split(",") if m.strip()]
+KILO_KEY = os.environ.get("KILO_API_KEY", "")
+KILO_MODELS = [m.strip() for m in os.environ.get(
+    "KILO_MODELS",
+    "kilo-auto/free,thinkingmachines/inkling:free,"
+    "minimax/minimax-m2.7:free,z-ai/glm-5:free",
+).split(",") if m.strip()]
+POLLINATIONS_KEY = os.environ.get("POLLINATIONS_API_KEY", "")
+POLLINATIONS_MODELS = [m.strip() for m in os.environ.get(
+    "POLLINATIONS_MODELS",
+    "gpt-oss-20b",
+).split(",") if m.strip()]
 ORIGINS = os.environ.get(
     "ALLOWED_ORIGINS",
     "https://advocateatul.github.io,https://advocateatul.eu.org",
@@ -137,7 +159,15 @@ def root():
             "cf_configured": bool(CF_TOKEN and CF_ACCOUNT),
             "cf_models": CF_MODELS,
             "nvidia_configured": bool(NVIDIA_KEY),
-            "nvidia_models": NVIDIA_MODELS}
+            "nvidia_models": NVIDIA_MODELS,
+            "sambanova_configured": bool(SAMBANOVA_KEY),
+            "sambanova_models": SAMBANOVA_MODELS,
+            "llm7_configured": bool(LLM7_KEY),
+            "llm7_models": LLM7_MODELS,
+            "kilo_configured": bool(KILO_KEY),
+            "kilo_models": KILO_MODELS,
+            "pollinations_configured": bool(POLLINATIONS_KEY),
+            "pollinations_models": POLLINATIONS_MODELS}
 
 
 async def _prompt(request):
@@ -408,4 +438,100 @@ async def nvidia(request: Request):
             return JSONResponse({"reply": reply, "model": model})
         last = model + ": " + why
     return JSONResponse({"error": "all nvidia models failed: " + last[:200]},
+                        status_code=502)
+
+@app.post("/sambanova")
+async def sambanova(request: Request):
+    """SambaNova Cloud free tier, OpenAI style at api.sambanova.ai/v1. Missing key -> 503."""
+    if not SAMBANOVA_KEY:
+        return JSONResponse({"error": "sambanova key not configured"},
+                            status_code=503)
+    prompt, err = await _prompt(request)
+    if err is not None:
+        return err
+    headers = {"Authorization": "Bearer " + SAMBANOVA_KEY,
+               "Content-Type": "application/json"}
+    last = "no models configured"
+    only = request.query_params.get("model")
+    try_models = [only] if only else SAMBANOVA_MODELS
+    for model in try_models:
+        reply, why = _chat(
+            "https://api.sambanova.ai/v1/chat/completions",
+            headers, model, prompt, timeout=30)
+        if reply is not None:
+            return JSONResponse({"reply": reply, "model": model})
+        last = model + ": " + why
+    return JSONResponse({"error": "all sambanova models failed: " + last[:200]},
+                        status_code=502)
+
+@app.post("/llm7")
+async def llm7(request: Request):
+    """LLM7.io free token, OpenAI style at api.llm7.io/v1. Missing key -> 503."""
+    if not LLM7_KEY:
+        return JSONResponse({"error": "llm7 key not configured"},
+                            status_code=503)
+    prompt, err = await _prompt(request)
+    if err is not None:
+        return err
+    headers = {"Authorization": "Bearer " + LLM7_KEY,
+               "Content-Type": "application/json"}
+    last = "no models configured"
+    only = request.query_params.get("model")
+    try_models = [only] if only else LLM7_MODELS
+    for model in try_models:
+        reply, why = _chat(
+            "https://api.llm7.io/v1/chat/completions",
+            headers, model, prompt, timeout=30)
+        if reply is not None:
+            return JSONResponse({"reply": reply, "model": model})
+        last = model + ": " + why
+    return JSONResponse({"error": "all llm7 models failed: " + last[:200]},
+                        status_code=502)
+
+@app.post("/kilo")
+async def kilo(request: Request):
+    """Kilo Gateway free models, OpenAI style at ai-gateway.kilo.ai/api/v1. Missing key -> 503."""
+    if not KILO_KEY:
+        return JSONResponse({"error": "kilo key not configured"},
+                            status_code=503)
+    prompt, err = await _prompt(request)
+    if err is not None:
+        return err
+    headers = {"Authorization": "Bearer " + KILO_KEY,
+               "Content-Type": "application/json"}
+    last = "no models configured"
+    only = request.query_params.get("model")
+    try_models = [only] if only else KILO_MODELS
+    for model in try_models:
+        reply, why = _chat(
+            "https://ai-gateway.kilo.ai/api/v1/chat/completions",
+            headers, model, prompt, timeout=30)
+        if reply is not None:
+            return JSONResponse({"reply": reply, "model": model})
+        last = model + ": " + why
+    return JSONResponse({"error": "all kilo models failed: " + last[:200]},
+                        status_code=502)
+
+@app.post("/pollinations")
+async def pollinations(request: Request):
+    """Pollinations registered key, OpenAI style at gen.pollinations.ai/v1. Missing key -> 503."""
+    if not POLLINATIONS_KEY:
+        return JSONResponse({"error": "pollinations key not configured"},
+                            status_code=503)
+    prompt, err = await _prompt(request)
+    if err is not None:
+        return err
+    headers = {"Authorization": "Bearer " + POLLINATIONS_KEY,
+               "Content-Type": "application/json"}
+    last = "no models configured"
+    only = request.query_params.get("model")
+    try_models = [only] if only else POLLINATIONS_MODELS
+    for model in try_models:
+        reply, why = _chat(
+            "https://gen.pollinations.ai/v1/chat/completions",
+            headers, model, prompt, timeout=30)
+        if reply is not None:
+            return JSONResponse({"reply": reply, "model": model})
+        last = model + ": " + why
+    return JSONResponse({"error": "all pollinations models failed: " + last[:200]},
                         status_code=502)
